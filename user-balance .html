@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>余额查询</title>
+  <style>
+    body {
+      font-family: 'PingFang SC', 'Helvetica Neue', sans-serif;
+      background: #f9f9f9;
+      color: #333;
+      text-align: center;
+      padding: 50px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 30px;
+      max-width: 400px;
+      margin: auto;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    }
+    h1 {
+      font-size: 22px;
+      margin-bottom: 20px;
+    }
+    p {
+      font-size: 16px;
+      line-height: 1.8;
+    }
+    .error {
+      color: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="content">
+    <h1>余额查询</h1>
+    <p>正在加载数据，请稍候...</p>
+  </div>
+
+  <script>
+    async function fetchCSV() {
+      try {
+        const response = await fetch('data.csv');
+        const text = await response.text();
+        return text;
+      } catch (e) {
+        throw new Error("无法加载数据文件");
+      }
+    }
+
+    function parseCSV(text) {
+      const lines = text.trim().split('\n');
+      const [header, ...rows] = lines;
+      const keys = header.split(',');
+
+      return rows.map(row => {
+        const values = row.split(',');
+        const obj = {};
+        keys.forEach((key, i) => {
+          obj[key.trim()] = values[i].trim();
+        });
+        return obj;
+      });
+    }
+
+    function getQueryParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    async function showBalance() {
+      const userId = getQueryParam('user');
+      const container = document.getElementById('content');
+
+      if (!userId) {
+        container.innerHTML = `<h1>余额查询</h1><p class="error">请提供 user 参数，例如：?user=1762529</p>`;
+        return;
+      }
+
+      try {
+        const csvText = await fetchCSV();
+        const data = parseCSV(csvText);
+        const user = data.find(d => d.user === userId);
+
+        if (!user) {
+          container.innerHTML = `<h1>余额查询</h1><p class="error">未找到该用户的信息</p>`;
+        } else {
+          container.innerHTML = `
+            <h1>欢迎你，${user.name}</h1>
+            <p>当前余额：<strong>${user.balance}</strong></p>
+          `;
+        }
+      } catch (error) {
+        container.innerHTML = `<h1>余额查询</h1><p class="error">发生错误：${error.message}</p>`;
+      }
+    }
+
+    showBalance();
+  </script>
+</body>
+</html>
